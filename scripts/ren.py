@@ -1,13 +1,14 @@
 import os
 import math
 
+
 NAMES = ['f', 'l', 'b', 'r', 'u', 'd']
 EXT = '.jpg'
-DIR = '.'
+DIR = '../img'
 
 files = os.listdir(DIR)
 fileCount = len(files)
-for i in range(0, (fileCount / 6) + 1):
+for i in range(0, (fileCount / 6)):
 	dir = DIR + '/p' + str(i)
 	if not os.path.exists(dir):
 		os.makedirs(dir)
@@ -19,6 +20,6 @@ for f in files:
 	src = DIR + '/' + f
 	dest = DIR + '/p' + str(dir) + '/' + NAMES[n] + EXT
 	print 'Renaming', src, dest
-	#os.rename(DIR + '/' + f, DIR + '/p' + str(dir) + '/' + NAMES[n] + EXT) 
+	if not os.path.isdir(src): os.rename(src, dest)
 	i = i + 1
 	
