@@ -55,7 +55,10 @@ function Engine() {
 	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);		
 	container = document.createElement( 'container' );
 	document.body.appendChild( container );
-	container.appendChild( renderer.domElement );		
+	container.appendChild( renderer.domElement );	
+	renderer.domElement.oncontextmenu = function (e) {
+		e.preventDefault();
+	};	
 	
 	//Events	
 	document.addEventListener( 'mousemove', onMouseMove, false );	
