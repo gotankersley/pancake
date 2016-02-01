@@ -57,7 +57,22 @@ function init() {
 	var EXT = '.jpg';
 	
 	var sideGeo = new THREE.PlaneGeometry( BOX_SIZE, BOX_SIZE, BOX_SIZE);
-	var 
+	var sidePositions = [
+		new THREE.Vector3(0, 0, -BOX_CENTER),
+		new THREE.Vector3(-BOX_CENTER, 0, 0),
+		new THREE.Vector3(BOX_CENTER, 0, -0),
+		new THREE.Vector3(0, 0, -BOX_CENTER),
+		new THREE.Vector3(0, 0, -BOX_CENTER),
+		new THREE.Vector3(0, 0, -BOX_CENTER),
+	];
+	var sideRotations = [
+		plane3.rotation.y = -Math.PI/2,
+		plane3.rotation.y = -Math.PI/2,
+		plane3.rotation.y = -Math.PI/2,
+		plane3.rotation.y = -Math.PI/2,
+		plane3.rotation.y = -Math.PI/2,
+		plane3.rotation.y = -Math.PI/2,
+	];
 	//var boxMaterials = [];
 	var boxSides = [];
 	for (var i = 0; i < 6; i++) { //Six faces on a cube...
@@ -66,31 +81,10 @@ function init() {
 		});
 		//boxMaterials.push(material);
 		var side = new THREE.Mesh( sideGeo, sideMaterial );
+		plane3.rotation.y = -Math.PI/2;
+		scene.add(side);
 	}
 	
-	
-	
-	plane.position = new THREE.Vector3(0, 0, -BOX_CENTER);
-	
-	///
-	var material = new THREE.MeshBasicMaterial({		
-		map: THREE.ImageUtils.loadTexture( 'img/p0/l.jpg'),//imagePrefix + directions[i] + imageSuffix ),		
-	} );
-	var plane2 = new THREE.Mesh( planeGeo, material );	
-	plane2.rotation.y = Math.PI/2;
-	plane2.position = new THREE.Vector3(-BOX_CENTER, 0, 0);
-	
-	///
-	var material = new THREE.MeshBasicMaterial({		
-		map: THREE.ImageUtils.loadTexture( 'img/p0/r.jpg'),//imagePrefix + directions[i] + imageSuffix ),		
-	} );
-	var plane3 = new THREE.Mesh( planeGeo, material );
-	plane3.rotation.y = -Math.PI/2;
-	plane3.position = new THREE.Vector3(BOX_CENTER, 0, 0);
-	
-	scene.add( plane );
-	scene.add( plane2 );
-	scene.add( plane3 );
 	
 	render();
 }
