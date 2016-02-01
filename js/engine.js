@@ -1,177 +1,117 @@
-var camera, scene, renderer;
-var raycaster; 
-var mouse;
+'use strict';
 
-var isUserInteracting = false,
-onMouseDownMouseX = 0, onMouseDownMouseY = 0,
-lon = 0, onMouseDownLon = 0,
-lat = 0, onMouseDownLat = 0,
-phi = 0, theta = 0;
+//Global variables
+var container;
+var scene;
+var camera;
+var renderer;
+var controls;
+var origin;
+var mouse = new THREE.Vector2();
+var raycaster = new THREE.Raycaster();
 
 init();
-animate();
-
 function init() {
+	scene = new THREE.Scene;
+		
+	var SCREEN_WIDTH = window.innerWidth;
+	var SCREEN_HEIGHT = window.innerHeight;		
+	var VIEW_ANGLE = 75;
+	var ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
+	var NEAR = 0.1;
+	var FAR = 200;	
 
-	var container, mesh;
-
-	container = document.getElementById( 'container' );
-
-	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1100 );
-	camera.target = new THREE.Vector3( 0, 0, 0 );
-
-	scene = new THREE.Scene();
-	raycaster = new THREE.Raycaster();
-	mouse = new THREE.Vector2();
+	//Camera
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);	
+	scene.add(camera);	
+	camera.position.set(0, 0, 0);
 	
-	var imagePrefix = 'img/p1/'; 
-	var directions  = ['l', 'r', 'u', 'd', 'f', 'b'];
-	var imageSuffix = '.jpg';
-	var skyGeometry = new THREE.CubeGeometry( 10, 10, 10 );	
-	
-	var materialArray = [];
-	for (var i = 0; i < 6; i++)
-		materialArray.push( new THREE.MeshBasicMaterial({
-			map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
-			side: THREE.BackSide
-		}));
-	var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
-	var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
-	
-	//scene.add( skyBox );
-
-	var ambient = new THREE.AmbientLight( 0xffffff );
-	
-	//Add to scene
-	scene.add(ambient);				
-	hemi = new THREE.HemisphereLight( 0x0000ff, 0x00ff00, 0.6 ); 
-	scene.add(hemi);
-	
-	var geometry = new THREE.PlaneGeometry( 10, 10, 10 );
-	var material = new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} );
-	plane = new THREE.Mesh( geometry, material );
-	scene.add( plane );
-	plane.rotation.y = Math.PI / 2;
-	plane.position.x = 0;
-	plane.position.y = 0;
-	plane.position.z = 4;
-
-	renderer = new THREE.WebGLRenderer({antialias:true});
-	renderer.setPixelRatio( window.devicePixelRatio );
-	renderer.setSize( window.innerWidth, window.innerHeight );
+	//Renderer
+	renderer = new THREE.WebGLRenderer( {antialias:true} );		
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);		
+	container = document.createElement( 'container' );
+	document.body.appendChild( container );
 	container.appendChild( renderer.domElement );
-
-	document.addEventListener( 'mousedown', onDocumentMouseDown, false );	
-	document.addEventListener( 'mouseup', onDocumentMouseUp, false );
-	document.addEventListener( 'mousewheel', onDocumentMouseWheel, false );
-	document.addEventListener( 'MozMousePixelScroll', onDocumentMouseWheel, false);
+	controls = new THREE.OrbitControls( camera, renderer.domElement );	
+	controls.center = new THREE.Vector3(0, 0, 0);
 	
-	window.addEventListener( 'mousemove', onMouseMove, false );	
-	window.addEventListener( 'resize', onWindowResize, false );
-
+	//Events
+	window.addEventListener( 'mousemove', onMouseMove, false );		
+	
+	//Stage
+	setStage();
+	render();
 }
 
-var plane;
+function setStage() {
+
+	
+	//Origin
+	var originGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.1, 10, 1, false);
+	var originMat = new THREE.MeshNormalMaterial();	
+	origin = new THREE.Mesh(originGeo, originMat);
+	scene.add(origin);
+	
+	//Box
+	var BOX_SIZE = 10;
+	var BOX_CENTER = BOX_SIZE/2;
+	
+	var PATH = 'img/p1/'; 
+	var DIRS  = ['f', 'l', 'b', 'r', 'd', 'u'];
+	var EXT = '.jpg';
+	
+	var sideGeo = new THREE.PlaneGeometry( BOX_SIZE, BOX_SIZE, BOX_SIZE);
+	var sidePositions = [
+		new THREE.Vector3(0, 0, -BOX_CENTER),
+		new THREE.Vector3(-BOX_CENTER, 0, 0),
+		new THREE.Vector3(0, 0, BOX_CENTER),
+		new THREE.Vector3(BOX_CENTER, 0, -0),		
+		new THREE.Vector3(0, -BOX_CENTER, 0),
+		new THREE.Vector3(0, BOX_CENTER, 0),
+	];
+	var sideRotations = [
+		new THREE.Vector3(0, 0, 0),
+		new THREE.Vector3(0, Math.PI/2, 0),
+		new THREE.Vector3(0, -Math.PI, 0),
+		new THREE.Vector3(0, -Math.PI/2, 0),		
+		new THREE.Vector3(-Math.PI/2, 0, 0),
+		new THREE.Vector3(Math.PI/2, 0, Math.PI),
+	];
+	
+	var boxSides = [];
+	for (var i = 0; i < 6; i++) { //Six faces on a cube...
+		var sideMaterial = new THREE.MeshBasicMaterial({		
+			map: THREE.ImageUtils.loadTexture( PATH + DIRS[i] + EXT ),		
+		});
+	
+		var side = new THREE.Mesh( sideGeo, sideMaterial );
+		side.position.copy(sidePositions[i]);
+		var euler = new THREE.Euler(sideRotations[i].x, sideRotations[i].y, sideRotations[i].z, 'XYZ');		
+		side.rotation.copy(euler);
+		
+		boxSides.push(side);
+		scene.add(side);
+	}
+		
+}
 
 function onMouseMove( event ) {
 
-	// calculate mouse position in normalized device coordinates
-	// (-1 to +1) for both components
-	//lon = ( onPointerDownPointerX - event.clientX ) * 0.1 + onPointerDownLon;
-	//lat = ( event.clientY - onPointerDownPointerY ) * 0.1 + onPointerDownLat;
-	
 	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;		
 
-}	
-
-function onWindowResize() {
-
-	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
-
-	renderer.setSize( window.innerWidth, window.innerHeight );
-
 }
 
-function onDocumentMouseDown( event ) {
-
-	event.preventDefault();
-
-	isUserInteracting = true;
-
-	//onPointerDownPointerX = event.clientX;
-	//onPointerDownPointerY = event.clientY;
-
-	onPointerDownLon = lon;
-	onPointerDownLat = lat;
-
-}
-
-
-
-function onDocumentMouseUp( event ) {
-
-	isUserInteracting = false;
-
-}
-
-function onDocumentMouseWheel( event ) {
-
-	// WebKit
-
-	if ( event.wheelDeltaY ) {
-
-		camera.fov -= event.wheelDeltaY * 0.05;
-
-	// Opera / Explorer 9
-
-	} else if ( event.wheelDelta ) {
-
-		camera.fov -= event.wheelDelta * 0.05;
-
-	// Firefox
-
-	} else if ( event.detail ) {
-
-		camera.fov += event.detail * 1.0;
-
-	}
-
-	camera.updateProjectionMatrix();
-
-}
-
-function animate() {
-	requestAnimationFrame( animate );
-	update();
-
-}
-
-function update() {
+function render(time) {	
+	controls.update();
+	
 	// update the picking ray with the camera and mouse position	
 	raycaster.setFromCamera( mouse, camera );	
 
 	// calculate objects intersecting the picking ray
-	var intersects = raycaster.intersectObjects( scene.children );
-	if ( isUserInteracting === true ) {
-		console.log(intersects);
-		lon += 0.1;
-
-	}
-
-	lat = Math.max( - 85, Math.min( 85, lat ) );
-	phi = THREE.Math.degToRad( 90 - lat );
-	theta = THREE.Math.degToRad( lon );
-
-	camera.target.x = 500 * Math.sin( phi ) * Math.cos( theta );
-	camera.target.y = 500 * Math.cos( phi );
-	camera.target.z = 500 * Math.sin( phi ) * Math.sin( theta );
-
-	//camera.lookAt( camera.target );
-	camera.lookAt(plane.position);
+	var intersects = raycaster.intersectObjects( scene.children );	
+	//console.log(intersects);
 	
-
 	renderer.render( scene, camera );
-
+	requestAnimationFrame( render );	
 }
