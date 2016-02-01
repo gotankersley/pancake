@@ -33,18 +33,28 @@ function init() {
 	for (var i = 0; i < 6; i++)
 		materialArray.push( new THREE.MeshBasicMaterial({
 			map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
-			//side: THREE.BackSide
+			side: THREE.BackSide
 		}));
 	var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
 	var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
 	
-	scene.add( skyBox );
+	//scene.add( skyBox );
 
 	var ambient = new THREE.AmbientLight( 0xffffff );
 	
 	//Add to scene
 	scene.add(ambient);				
+	hemi = new THREE.HemisphereLight( 0x0000ff, 0x00ff00, 0.6 ); 
+	scene.add(hemi);
 	
+	var geometry = new THREE.PlaneGeometry( 10, 10, 10 );
+	var material = new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} );
+	plane = new THREE.Mesh( geometry, material );
+	scene.add( plane );
+	plane.rotation.y = Math.PI / 2;
+	plane.position.x = 0;
+	plane.position.y = 0;
+	plane.position.z = 4;
 
 	renderer = new THREE.WebGLRenderer({antialias:true});
 	renderer.setPixelRatio( window.devicePixelRatio );
@@ -61,7 +71,7 @@ function init() {
 
 }
 
-
+var plane;
 
 function onMouseMove( event ) {
 
@@ -158,7 +168,8 @@ function update() {
 	camera.target.y = 500 * Math.cos( phi );
 	camera.target.z = 500 * Math.sin( phi ) * Math.sin( theta );
 
-	camera.lookAt( camera.target );
+	//camera.lookAt( camera.target );
+	camera.lookAt(plane.position);
 	
 
 	renderer.render( scene, camera );
