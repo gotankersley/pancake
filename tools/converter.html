@@ -52,6 +52,9 @@ function parseTag(tagData) {
 		str += '{';
 		str += 'cursor:"' + p.attr('href') + '",';
 		str += 'target:' + p.attr('target') + ',';
+		var lonLat = p.attr('alt').split(',');		
+		str += 'lon:' + lonLat[0] + ',';
+		str += 'lat:' + lonLat[1] + ',';
 		str += 'coords:[';
 		var coords = p.attr('coords').split(',');
 		for (var c = 0; c < coords.length; c+=2) { //Should always be an even length

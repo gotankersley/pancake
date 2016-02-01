@@ -4,6 +4,7 @@
 var BOX_SIZE = 10;
 var BOX_CENTER = BOX_SIZE/2;
 var IMG_SIZE = 1024;
+var SCENES_PATH = './scenes/0/';
 
 //Global variables
 var container;
@@ -27,9 +28,8 @@ var lat = 0;
 var phi = 0;
 var theta = 0;
 	
-
-init();
-function init() {
+//Class Engine
+function Engine() {
 		
 	var SCREEN_WIDTH = window.innerWidth;
 	var SCREEN_HEIGHT = window.innerHeight;		
@@ -38,6 +38,11 @@ function init() {
 	var NEAR = 0.1;
 	var FAR = 200;	
 
+	//Engine properties
+	this.callbacks = {};
+	this.curScene = 0;
+	
+	
 	//Camera
 	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
 	camera.target = new THREE.Vector3( 0, 0, 0 );	
@@ -62,6 +67,9 @@ function init() {
 	render();
 }
 
+Engine.prototype.addEvents = function(eventName, callback) {
+	this.callbacks[eventName].push(callback);
+}
 
 function setStage() {
 	
@@ -72,8 +80,7 @@ function setStage() {
 	//scene.add(origin);
 	
 	//Box
-	
-	var PATH = 'img/p1/'; 
+		
 	var DIRS  = ['f', 'l', 'b', 'r', 'd', 'u'];
 	var EXT = '.jpg';
 	
@@ -98,7 +105,7 @@ function setStage() {
 	boxSides = [];
 	for (var i = 0; i < 6; i++) { //Six faces on a cube...
 		var sideMaterial = new THREE.MeshBasicMaterial({		
-			map: THREE.ImageUtils.loadTexture( PATH + DIRS[i] + EXT ),		
+			map: THREE.ImageUtils.loadTexture( SCENES_PATH + DIRS[i] + EXT ),		
 		});
 	
 		var side = new THREE.Mesh( sideGeo, sideMaterial );
@@ -118,11 +125,13 @@ function onMouseMove( e ) {
 		lon = ( mouseDown.x - e.clientX ) * 0.1 + prevLon;
 		lat = ( e.clientY - mouseDown.y ) * 0.1 + prevLat;
 	}
-		
+	mouse.x = (e.clientX  / window.innerWidth ) * 2 - 1;	
+	mouse.y = - (e.clientY / window.innerHeight ) * 2 + 1;	
+	picking(mouse, false);	
 
 }
 
-function picking(mouse) {
+function picking(mouse, click) {
 	// update the picking ray with the camera and mouse position	
 	raycaster.setFromCamera( mouse, camera );	
 
@@ -169,15 +178,24 @@ function picking(mouse) {
 		];
 		
 		var regions = nav[0];	
+		var found = false;
 		for (var r = 0; r < regions.length; r++) {
 			var region = regions[r];
 			if (inside(point, region.coords)) {
 				//this.curRegion = region;
+				renderer.domElement.style.cursor = 'pointer';
 				//this.curCursor = region.cursor;
-				console.log(region.cursor);
+				//console.log(region.cursor);
+				found = true;
+				if (click) {
+					SCENES_PATH = 'scenes/6/';
+					scene.remove(boxSides);
+					setStage();
+				}
 				break;
 			}
 		}
+		if (!found) renderer.domElement.style.cursor = 'default';
 		//console.log(dir, point);
 	}		
 }
@@ -193,7 +211,7 @@ function onMouseDown( e ) {
 	
 	mouse.x = (e.clientX  / window.innerWidth ) * 2 - 1;	
 	mouse.y = - (e.clientY / window.innerHeight ) * 2 + 1;	
-	picking(mouse);
+	picking(mouse, true);
 }
 
 function onMouseUp( e ) {
@@ -238,3 +256,6 @@ function render(time) {
 	renderer.render( scene, camera );
 	requestAnimationFrame( render );	
 }
+//End class Engine
+
+var engine = new Engine();
