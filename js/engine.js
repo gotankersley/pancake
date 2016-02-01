@@ -14,6 +14,7 @@ var renderer;
 var origin;
 var boxSides;
 var raycaster = new THREE.Raycaster();
+var ID_TO_DIR = {};
 
 //Camera controls
 var mouse = new THREE.Vector2();
@@ -21,7 +22,7 @@ var mouseDown = new THREE.Vector2();
 var looking = false;
 var prevLon;
 var prevLat;
-var lon = 270;
+var lon = 0;//270;
 var lat = 0;
 var phi = 0;
 var theta = 0;
@@ -49,7 +50,7 @@ function init() {
 	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);		
 	container = document.createElement( 'container' );
 	document.body.appendChild( container );
-	container.appendChild( renderer.domElement );	
+	container.appendChild( renderer.domElement );		
 	
 	//Events	
 	document.addEventListener( 'mousemove', onMouseMove, false );	
@@ -65,10 +66,10 @@ function init() {
 function setStage() {
 	
 	//Origin
-	var originGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.1, 10, 1, false);
-	var originMat = new THREE.MeshNormalMaterial();	
-	origin = new THREE.Mesh(originGeo, originMat);
-	scene.add(origin);
+	//var originGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.1, 10, 1, false);
+	//var originMat = new THREE.MeshNormalMaterial();	
+	//origin = new THREE.Mesh(originGeo, originMat);
+	//scene.add(origin);
 	
 	//Box
 	
@@ -104,7 +105,7 @@ function setStage() {
 		side.position.copy(sidePositions[i]);
 		var euler = new THREE.Euler(sideRotations[i].x, sideRotations[i].y, sideRotations[i].z, 'XYZ');		
 		side.rotation.copy(euler);
-		
+		ID_TO_DIR[side.id] = DIRS[i];		
 		boxSides.push(side);
 		scene.add(side);
 	}
@@ -121,6 +122,66 @@ function onMouseMove( e ) {
 
 }
 
+function picking(mouse) {
+	// update the picking ray with the camera and mouse position	
+	raycaster.setFromCamera( mouse, camera );	
+
+	// calculate objects intersecting the picking ray
+	var intersects = raycaster.intersectObjects( boxSides);	
+	if ( intersects.length > 0 ) {
+		
+		var col = intersects[0];
+		var point3d = col.point; //Point in 3D space
+		var dir = ID_TO_DIR[col.object.id];
+		var point2d = new THREE.Vector2();
+		switch(dir) {
+			case 'f':
+				point2d.x = point3d.x + BOX_CENTER;
+				point2d.y = BOX_SIZE - (point3d.y + BOX_CENTER);
+				break;
+			case 'l':
+				point2d.x = BOX_SIZE - (point3d.z + BOX_CENTER);
+				point2d.y = BOX_SIZE - (point3d.y + BOX_CENTER);
+				break;
+			case 'b':
+				point2d.x = BOX_SIZE - (point3d.x + BOX_CENTER);
+				point2d.y = BOX_SIZE - (point3d.y + BOX_CENTER);
+				break;
+			case 'r':
+				point2d.x = point3d.z + BOX_CENTER;
+				point2d.y = BOX_SIZE - (point3d.y + BOX_CENTER);
+				break;
+			case 'd':
+				point2d.x = point3d.x + BOX_CENTER;
+				point2d.y = point3d.z + BOX_CENTER;
+				break;
+			case 'u':
+				point2d.x = BOX_SIZE - (point3d.x + BOX_CENTER);
+				point2d.y = point3d.z + BOX_CENTER;
+				break;
+		}
+		
+			
+		//cross multiply to get in the range of [0-1023]
+		var point = [
+			(IMG_SIZE * point2d.x)/BOX_SIZE, //x
+			(IMG_SIZE * point2d.y)/BOX_SIZE  //y
+		];
+		
+		var regions = nav[0];	
+		for (var r = 0; r < regions.length; r++) {
+			var region = regions[r];
+			if (inside(point, region.coords)) {
+				//this.curRegion = region;
+				//this.curCursor = region.cursor;
+				console.log(region.cursor);
+				break;
+			}
+		}
+		//console.log(dir, point);
+	}		
+}
+
 function onMouseDown( e ) {
 	e.preventDefault();
 	looking = true;
@@ -130,34 +191,38 @@ function onMouseDown( e ) {
 	prevLon = lon;
 	prevLat = lat;
 	
-	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;		
-
+	mouse.x = (e.clientX  / window.innerWidth ) * 2 - 1;	
+	mouse.y = - (e.clientY / window.innerHeight ) * 2 + 1;	
+	picking(mouse);
 }
 
 function onMouseUp( e ) {
 	looking = false;
 }
 
+//Collision detection
+function inside (point, vs) { //https://github.com/substack/point-in-polygon
+    // ray-casting algorithm based on
+    // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+    
+    var x = point[0], y = point[1];
+    
+    var inside = false;
+    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        var xi = vs[i][0], yi = vs[i][1];
+        var xj = vs[j][0], yj = vs[j][1];
+        
+        var intersect = ((yi > y) != (yj > y))
+            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    
+    return inside;
+};
+
 function render(time) {	
 	
-	if (looking) {
-		// update the picking ray with the camera and mouse position	
-		raycaster.setFromCamera( mouse, camera );	
-
-		// calculate objects intersecting the picking ray
-		var intersects = raycaster.intersectObjects( boxSides);	
-		if ( intersects.length > 0 ) {
-			var col = intersects[0].point;
-			var p = new THREE.Vector2(col.z + BOX_CENTER, BOX_SIZE - (col.y + BOX_CENTER));
-			
-			p.x = (IMG_SIZE * p.x)/BOX_SIZE;
-			p.y = (IMG_SIZE * p.y)/BOX_SIZE;
-			//origin.position.copy(col);			
-			console.log(p);
-		}		
-
-	}
+	
 	
 	lat = Math.max( - 85, Math.min( 85, lat ) );
 	phi = THREE.Math.degToRad( 90 - lat );
