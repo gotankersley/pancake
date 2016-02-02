@@ -5,7 +5,7 @@
 <!-- #$-:GIMP Image Map plug-in by Maurits Rijk -->
 <!-- #$-:Please do not edit lines starting with "#$" -->
 <!-- #$VERSION:2.3 -->
-<!-- #$AUTHOR:gotankersley   -->
-<area shape="poly" coords="720,840,720,300,930,90,930,1020,825,1020" alt="0,0" target="1" href="f" />
-<area shape="poly" coords="165,330,165,750,660,750,645,330" alt="0,0" target="1" href="f" />
+<!-- #$AUTHOR:Glen -->
+<area shape="poly" coords="315,150,315,735,165,855,0,855,0,45,225,45" target="3" href="f" />
+<area shape="poly" coords="420,345,420,825,810,825,810,345" target="3" href="f" />
 </map>

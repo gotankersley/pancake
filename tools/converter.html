@@ -16,25 +16,25 @@ Add file(s) to convert:<br/>
 <script>
 var inputElement = document.getElementById("input");
 inputElement.addEventListener("change", handleFiles, false);
-var outputStr = 'var nav=[';
+var outputStr = 'var hotspots={';
 
 function handleFiles() {	
 	if (this.files) readFiles(this.files, done);		
 }
 
 function done() {
-	$('#output').val(outputStr + '];\n');
+	$('#output').val(outputStr + '};\n');
 }
 
 function readFiles(files, onComplete, i) { //Recur loop
 	if (typeof(i) == 'undefined') i = 0;
 	var file = files[i];
-	var item = file.name;
-	var num = parseInt(item.replace('.map', '').substr(2));
+	var name = file.name.replace('.map', '');
+	//var sceneDir = name.split('-'); //e.g. 0-r.map for [scene 0, right]
 	var reader = new FileReader();
 	reader.onload = function(e) {
 		var html = e.target.result;		
-		outputStr += parseTag(html) + '//' + num + '\n';
+		outputStr += '"' + name + '":' + parseTag(html) + ',//' + name + '\n';
 		
 		if (i+1 < files.length) readFiles(files, onComplete, i+1);
 		else onComplete();
@@ -52,9 +52,9 @@ function parseTag(tagData) {
 		str += '{';
 		str += 'cursor:"' + p.attr('href') + '",';
 		str += 'target:' + p.attr('target') + ',';
-		var lonLat = p.attr('alt').split(',');		
-		str += 'lon:' + lonLat[0] + ',';
-		str += 'lat:' + lonLat[1] + ',';
+		//var lonLat = p.attr('alt').split(',');		
+		//str += 'lon:' + lonLat[0] + ',';
+		//str += 'lat:' + lonLat[1] + ',';
 		str += 'coords:[';
 		var coords = p.attr('coords').split(',');
 		for (var c = 0; c < coords.length; c+=2) { //Should always be an even length
@@ -63,7 +63,7 @@ function parseTag(tagData) {
 		str += '],';
 		str += '},';	
 	});
-	return str + '],';
+	return str + ']';
 }
 </script>
 

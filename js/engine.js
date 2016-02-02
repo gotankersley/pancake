@@ -11,13 +11,21 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	var SCENES_PATH = './scenes/';
 	var DEBUG = false;
 	var ID_TO_DIR = {};
-	var FOV_MAX = 75;2
+	var FOV_MAX = 75;
 	var FOV_MIN = 55;
 	var BUTTON_RIGHT = 3; 
+	
+	var CURSORS_PATH = './cursors/';
+	var CURSORS_TO_LOAD = ['forward.png'];
+	var CURSORS_ALIASES = ['f'];
+	
+	var CURSOR_CENTERS_X = {f:15};
+	var CURSOR_CENTERS_Y = {f:0};
 	
 	//Module variables
 	var container;
 	var canvas;
+	var ctx;
 	var scene;
 	var camera;
 	var renderer;
@@ -26,17 +34,19 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	var raycaster = new THREE.Raycaster();	
 
 	//Camera controls	
+	var mouse = new THREE.Vector2();
 	var mouseDown = new THREE.Vector2();
 	var looking = false;
 	var prevLon;
 	var prevLat;
-	var lon = 0;//270;
+	var lon = 270;
 	var lat = 0;
 	var phi = 0;
 	var theta = 0;
 	
 	//Properties
-	var curScene = 0;	
+	var curScene = 1;
+	var cursors = {};
 		
 	//Class Engine
 	function Engine() {
@@ -62,6 +72,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		document.body.appendChild( container );
 		container.appendChild( renderer.domElement );	
 		canvas = renderer.domElement;
+		ctx = canvas.getContext('2d');
 		canvas.oncontextmenu = function (e) {
 			e.preventDefault();
 		};	
@@ -74,9 +85,12 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		document.addEventListener( 'MozMousePixelScroll', onMouseWheel, false);
 		window.addEventListener( 'resize', onWindowResize, false );
 		
-		//Stage
-		setStage();
-		render();
+		//Cursors
+		//loadCursors(function() {
+			//Stage		
+			setStage();
+			render();
+		//});
 	}
 
 	//Public functions
@@ -126,7 +140,19 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 			
 	}
 
-
+	function loadCursors(onComplete, i) {	//Recursive loading loop
+		if (typeof(i) == 'undefined') i = 0;		
+		var cursorAlias = CURSORS_ALIASES[i];
+		var cursor = new Image();  
+		cursor.onload = function() {			
+			if (i >= CURSORS_TO_LOAD.length - 1) onComplete();
+			else self.loadCursors(onComplete, i+1);
+		}	
+		cursor.src = CURSORS_PATH + '/' + CURSORS_TO_LOAD[i];
+			
+		cursors[cursorAlias] = cursor;
+	}
+	
 	function getCollisions(mouse) {
 		// update the picking ray with the camera and mouse position	
 		raycaster.setFromCamera( mouse, camera );	
@@ -180,17 +206,19 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 			
 			var col = collisions[0];
 			var point2d = collisionPointToTexturePoint(col);
-						
-			var regions = nav[curScene];	
-			
-			for (var r = 0; r < regions.length; r++) {
-				var region = regions[r];
-				if (inside(point2d, region.coords)) {
-					if (DEBUG) console.log(dir, point2d);
-					return region;										
+			var dir = ID_TO_DIR[col.object.id];		
+			var sceneKey = curScene + '-' + dir;
+			if (typeof(hotspots[sceneKey]) != 'undefined') {
+				var regions = hotspots[sceneKey];	
+				
+				for (var r = 0; r < regions.length; r++) {
+					var region = regions[r];
+					if (inside(point2d, region.coords)) {
+						//if (DEBUG) console.log(dir, point2d);
+						return region;										
+					}
 				}
-			}
-			
+			}			
 			
 		}
 		return null;
@@ -201,8 +229,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		if (looking) {
 			lon = ( mouseDown.x - e.clientX ) * 0.1 + prevLon;
 			lat = ( e.clientY - mouseDown.y ) * 0.1 + prevLat;
-		}
-		var mouse = new THREE.Vector2();
+		}		
 		mouse.x = (e.clientX  / window.innerWidth ) * 2 - 1;	
 		mouse.y = - (e.clientY / window.innerHeight ) * 2 + 1;
 		
@@ -218,15 +245,16 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	function onMouseDown( e ) {
 		e.preventDefault();				
 		
-		if (e.which == BUTTON_RIGHT) { //Hotspot / navigation 
-			var mouse = new THREE.Vector2();
+		if (e.which == BUTTON_RIGHT) { //Hotspot / navigation 			
 			mouse.x = (e.clientX  / window.innerWidth ) * 2 - 1;	
 			mouse.y = - (e.clientY / window.innerHeight ) * 2 + 1;	
 			var region = getActiveRegion(mouse);
+			
 			if (region) onNavigationEvent(region);
 				
 		}
 		else { //Camera looking
+			//if (DEBUG) console.log(lon, lat);
 			looking = true;
 			mouseDown.x = e.clientX;
 			mouseDown.y = e.clientY;
@@ -262,10 +290,15 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 
 	}
 	
-	function onNavigationEvent(region) {
-		scene.remove(boxSides);
+	function onNavigationEvent(region) {		
+		scene.remove(boxSides[0]);
+		scene.remove(boxSides[1]);
+		scene.remove(boxSides[2]);
+		scene.remove(boxSides[3]);
+		scene.remove(boxSides[4]);
+		scene.remove(boxSides[5]);
 		curScene = region.target;
-		//setStage();
+		setStage();
 	}
 	
 	function render(time) {	
@@ -279,9 +312,12 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		camera.target.y = 500 * Math.cos( phi );
 		camera.target.z = 500 * Math.sin( phi ) * Math.sin( theta );
 
-		camera.lookAt( camera.target );
-					
+		camera.lookAt( camera.target );					
 		renderer.render( scene, camera );
+		
+		//Cursor overlay
+		//var cursor = cursors['f'];
+		//ctx.drawImage(cursor, 0, 0);//mouse.x - CURSOR_CENTERS_X[c], mouse.y - CURSOR_CENTERS_Y[c], cursor.width, cursor.height);
 		requestAnimationFrame( render );	
 	}
 	//End class Engine
