@@ -8,7 +8,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	var BOX_SIZE = 10;
 	var BOX_CENTER = BOX_SIZE/2;
 	var IMG_SIZE = 1024;
-	var SCENES_PATH = './scenes/';
+	var SCENES_PATH = './scenes/lo/';
 	var DEBUG = false;
 	var ID_TO_DIR = {};
 	var FOV_MAX = 75;
@@ -47,6 +47,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	//Properties
 	var curScene = 1;
 	var cursors = {};
+	var sceneHeight = 'lo';
 		
 	//Class Engine
 	function Engine() {
@@ -83,6 +84,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		document.addEventListener( 'mouseup', onMouseUp, false );	
 		document.addEventListener( 'mousewheel', onMouseWheel, false );
 		document.addEventListener( 'MozMousePixelScroll', onMouseWheel, false);
+		document.addEventListener( 'keydown', onKeyDown, false);
 		window.addEventListener( 'resize', onWindowResize, false );
 		
 		//Cursors
@@ -279,6 +281,29 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		camera.fov = Math.min(FOV_MAX, camera.fov);
 		camera.updateProjectionMatrix();
 
+	}
+	
+	function onKeyDown( e ) {		
+		var oldScenesPath = SCENES_PATH;
+		if (e.keyCode == 38) { //Up			
+			if (sceneHeight == 'lo') sceneHeight = 'med';
+			else if (sceneHeight == 'med') sceneHeight = 'hi';			
+		}
+		if (e.keyCode == 40) { //Down
+			if (sceneHeight == 'hi') sceneHeight = 'med';
+			else if (sceneHeight == 'med') sceneHeight = 'lo';
+		}
+		SCENES_PATH = './scenes/' + sceneHeight + '/';
+		console.log(oldScenesPath, SCENES_PATH, sceneHeight);
+		if (oldScenesPath != SCENES_PATH) {
+			scene.remove(boxSides[0]);
+			scene.remove(boxSides[1]);
+			scene.remove(boxSides[2]);
+			scene.remove(boxSides[3]);
+			scene.remove(boxSides[4]);
+			scene.remove(boxSides[5]);			
+			setStage();
+		}
 	}
 
 	function onWindowResize() {
