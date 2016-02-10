@@ -47,7 +47,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	//Properties
 	var curScene = 1;
 	var cursors = {};
-	var sceneHeight = 'lo';
+	var sceneHeight = 1;
 		
 	//Class Engine
 	function Engine() {
@@ -285,15 +285,16 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	
 	function onKeyDown( e ) {		
 		var oldScenesPath = SCENES_PATH;
-		if (e.keyCode == 38) { //Up			
-			if (sceneHeight == 'lo') sceneHeight = 'med';
-			else if (sceneHeight == 'med') sceneHeight = 'hi';			
+		var HEIGHTS = ['dark', 'lo', 'med', 'hi'];		
+		if (e.keyCode == 38) { //Up		
+			sceneHeight++;
+			if (sceneHeight + 1 >= HEIGHTS.length) sceneHeight = HEIGHTS.length - 1;
 		}
 		if (e.keyCode == 40) { //Down
-			if (sceneHeight == 'hi') sceneHeight = 'med';
-			else if (sceneHeight == 'med') sceneHeight = 'lo';
+			sceneHeight--;
+			if (sceneHeight < 0) sceneHeight = 0;
 		}
-		SCENES_PATH = './scenes/' + sceneHeight + '/';
+		SCENES_PATH = './scenes/' + HEIGHTS[sceneHeight] + '/';
 		console.log(oldScenesPath, SCENES_PATH, sceneHeight);
 		if (oldScenesPath != SCENES_PATH) {
 			scene.remove(boxSides[0]);
