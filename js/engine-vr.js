@@ -80,7 +80,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		canvas = renderer.domElement;
 		ctx = canvas.getContext('2d');
 		effect = new THREE.StereoEffect(renderer);
-		effect.eyeSeparation = 1;
+		effect.eyeSeparation = 1; 
 		effect.setSize( window.innerWidth, window.innerHeight );
 
 		//Controls
