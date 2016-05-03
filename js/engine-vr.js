@@ -125,7 +125,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		document.addEventListener( 'keydown', onKeyDown, false);
 		
 		window.addEventListener( 'resize', onWindowResize, false );
-		//window.addEventListener( 'click', onFullscreen, false); //Full-screen		
+		window.addEventListener( 'click', onFullscreen, false); //Full-screen		
 		
 		//Cursors
 		//loadCursors(function() {
