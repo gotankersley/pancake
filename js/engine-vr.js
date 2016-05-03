@@ -21,17 +21,19 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	
 	var CURSOR_CENTERS_X = {f:15};
 	var CURSOR_CENTERS_Y = {f:0};
-	
+		
+	var VIEW_ANGLE = 75;
+	var NEAR = 0.1;
+	var FAR = 200;	
+		
 	//Module variables
 	var container;
 	var canvas;
 	var ctx;
 	var scene;
-	var camera;
-	var renderer;
-	var effect;
-	var controls;
-	var clock;
+	
+	var renderer;			
+	var views;
 	
 	var boxSides;
 	var raycaster = new THREE.Raycaster();	
@@ -54,39 +56,60 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		
 	//Class Engine
 	function Engine() {
-			
-		var SCREEN_WIDTH = window.innerWidth;
-		var SCREEN_HEIGHT = window.innerHeight;		
-		var VIEW_ANGLE = 75;
-		var ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
-		var NEAR = 0.1;
-		var FAR = 200;				
-		
-		//Camera
-		clock = new THREE.Clock();
-		camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
-		camera.target = new THREE.Vector3( 0, 0, 0 );	
-		scene = new THREE.Scene;
-		scene.add(camera);			
-		camera.position.set(0, 0, 0);
-		
+						
+					
 		//Renderer
+		scene = new THREE.Scene;
 		renderer = new THREE.WebGLRenderer( {antialias:true} );		
-		renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);		
+		renderer.setSize(window.innerWidth, window.innerHeight);		
 		container = document.createElement( 'container' );
 		document.body.appendChild( container );
 		var element = renderer.domElement;
 		container.appendChild( element );	
 		canvas = renderer.domElement;
 		ctx = canvas.getContext('2d');
-		effect = new THREE.StereoEffect(renderer);
-		effect.eyeSeparation = 5; 
-		effect.setSize( window.innerWidth, window.innerHeight );
 
-		//Controls
-		controls = new THREE.OrbitControls(camera, element); 
-		controls.enablePan = false;
-		controls.autoRotate = true;
+		//Views
+		 views = [
+			{ //Left
+				left: 0,
+				bottom: 0,
+				width: 0.5,
+				height: 1.0,
+				background: new THREE.Color().setRGB( 0.5, 0.5, 0.5 ),
+				eye: [ 0, 0, 0 ],
+				up: [ 0, 1, 0 ],
+				fov: VIEW_ANGLE,
+				offRot : 0,
+				
+			},
+			{ //Right
+				left: 0.5,
+				bottom: 0,
+				width: 0.5,
+				height: 1,
+				background: new THREE.Color().setRGB( 0.5, 0.5, 0.5 ),
+				eye: [ 0, 0, 0 ],
+				up: [ 0, 1, 0 ],
+				fov: VIEW_ANGLE,
+				offRot : 0,
+				
+			},
+		];
+		
+		for (var v =  0; v < views.length; v++ ) {
+			var view = views[v];
+			var camera = new THREE.PerspectiveCamera( view.fov, window.innerWidth / window.innerHeight, NEAR, FAR );
+			camera.position.x = view.eye[ 0 ];
+			camera.position.y = view.eye[ 1 ];
+			camera.position.z = view.eye[ 2 ];
+			camera.up.x = view.up[ 0 ];
+			camera.up.y = view.up[ 1 ];
+			camera.up.z = view.up[ 2 ];
+			camera.target = new THREE.Vector3( 0, 0, 0 );	
+			view.camera = camera;
+		}
+							
 		
 		canvas.oncontextmenu = function (e) {
 			e.preventDefault();
@@ -102,8 +125,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		document.addEventListener( 'keydown', onKeyDown, false);
 		
 		window.addEventListener( 'resize', onWindowResize, false );
-		window.addEventListener( 'click', onFullscreen, false); //Full-screen
-		window.addEventListener( 'deviceorientation', onSetOrientation, true);
+		//window.addEventListener( 'click', onFullscreen, false); //Full-screen		
 		
 		//Cursors
 		//loadCursors(function() {
@@ -174,11 +196,16 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	}
 	
 	function getCollisions(mouse) {
-		// update the picking ray with the camera and mouse position	
-		raycaster.setFromCamera( mouse, camera );	
+		//for (v = 0; v < views.length; v++) {
+			var view = views[0];
+			var camera = view.camera;
+			// update the picking ray with the camera and mouse position	
+			raycaster.setFromCamera( mouse, camera );	
 
-		// calculate objects intersecting the picking ray
-		return raycaster.intersectObjects( boxSides);	
+			// calculate objects intersecting the picking ray
+			return raycaster.intersectObjects( boxSides);	
+		//}
+		
 	}
 	
 	function collisionPointToTexturePoint(col) { //Convert point in 3D space to texture x,y for hit testing
@@ -250,17 +277,9 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		else if (container.msRequestFullscreen) container.msRequestFullscreen();		
 		else if (container.mozRequestFullScreen) container.mozRequestFullScreen();		
 		else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+		onWindowResize();
 	}
 	
-	function onSetOrientation(e) {
-        if (!e.alpha) return;
-        
-		controls = new THREE.DeviceOrientationControls(camera, true);
-		controls.connect();
-		controls.update();
-		
-		window.removeEventListener('deviceorientation', onSetOrientation);
-	}
 	
 	function onMouseMove( e ) {
 
@@ -308,15 +327,26 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	}
 
 	function onMouseWheel( e ) {
-		
-		if ( e.wheelDeltaY ) camera.fov -= e.wheelDeltaY * 0.05; // WebKit
-		else if ( e.wheelDelta ) camera.fov -= e.wheelDelta * 0.05;  // Opera / Explorer 9
-		else if ( e.detail ) camera.fov += e.detail * 1.0; // Firefox
+		e.preventDefault();
+		if (e.ctrlKey) { //Zoom
+			for (var v =  0; v < views.length; v++ ) {
+				var view = views[v];
+				var camera = view.camera;
+				
+				if ( e.wheelDeltaY ) camera.fov -= e.wheelDeltaY * 0.05; // WebKit
+				else if ( e.wheelDelta ) camera.fov -= e.wheelDelta * 0.05;  // Opera / Explorer 9
+				else if ( e.detail ) camera.fov += e.detail * 1.0; // Firefox
 
-		camera.fov = Math.max(FOV_MIN, camera.fov);
-		camera.fov = Math.min(FOV_MAX, camera.fov);
-		camera.updateProjectionMatrix();
-
+				camera.fov = Math.max(FOV_MIN, camera.fov);
+				camera.fov = Math.min(FOV_MAX, camera.fov);
+				camera.updateProjectionMatrix();
+			}
+		}
+		else { //Eye separation						
+			views[0].offRot += e.wheelDeltaY * 0.01;			
+			views[1].offRot -= e.wheelDeltaY * 0.01;	
+			console.log(views[0].offRot, views[1].offRot);
+		}
 	}
 	
 	function onKeyDown( e ) {		
@@ -331,7 +361,7 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 			if (sceneHeight < 0) sceneHeight = 0;
 		}
 		SCENES_PATH = './scenes/' + HEIGHTS[sceneHeight] + '/';
-		console.log(oldScenesPath, SCENES_PATH, sceneHeight);
+		
 		if (oldScenesPath != SCENES_PATH) {
 			scene.remove(boxSides[0]);
 			scene.remove(boxSides[1]);
@@ -344,12 +374,13 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 	}
 
 	function onWindowResize() {
-
-		camera.aspect = window.innerWidth / window.innerHeight;
-		camera.updateProjectionMatrix();
-
-		renderer.setSize( window.innerWidth, window.innerHeight );
-		effect.setSize( window.innerWidth, window.innerHeight );
+		for ( var v = 0; v < views.length; v++ ) {
+			var view = views[v];
+			var camera = view.camera;
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+		}
+		renderer.setSize( window.innerWidth, window.innerHeight );		
 
 	}
 	
@@ -364,21 +395,42 @@ var Pancake = (function() { //Poor man's namespace (module pattern)
 		setStage();
 	}
 	
-	function render(time) {	
+	function render(time) {			
 		
-
-		lat = Math.max( - 85, Math.min( 85, lat ) );
-		phi = THREE.Math.degToRad( 90 - lat );
-		theta = THREE.Math.degToRad( lon );
 		
-		camera.target.x = 500 * Math.sin( phi ) * Math.cos( theta );
-		camera.target.y = 500 * Math.cos( phi );
-		camera.target.z = 500 * Math.sin( phi ) * Math.sin( theta );
+		for ( var v = 0; v < views.length; v++ ) {
 
-		camera.lookAt( camera.target );					
-		//renderer.render( scene, camera );
-		effect.render(scene, camera);
-		controls.update(clock.getDelta());
+			var view = views[v];
+			var camera = view.camera;
+
+			lat = Math.max( - 85, Math.min( 85, lat  ) );
+			phi = THREE.Math.degToRad( 90 - lat );
+			theta = THREE.Math.degToRad( lon + view.offRot);
+			
+					
+
+			var left   = Math.floor( window.innerWidth  * view.left );
+			var bottom = Math.floor( window.innerHeight * view.bottom );
+			var width  = Math.floor( window.innerWidth  * view.width );
+			var height = Math.floor( window.innerHeight * view.height );
+			
+			renderer.setViewport( left, bottom, width, height );
+			renderer.setScissor( left, bottom, width, height );
+			renderer.enableScissorTest ( true );
+			renderer.setClearColor( view.background );
+
+			camera.aspect = width / height;
+			camera.updateProjectionMatrix();
+
+			camera.target.x = 500 * Math.sin( phi ) * Math.cos( theta );
+			camera.target.y = 500 * Math.cos( phi );
+			camera.target.z = 500 * Math.sin( phi ) * Math.sin( theta );
+
+			camera.lookAt( camera.target );		
+			
+			renderer.render( scene, camera );
+		}				
+								
 		requestAnimationFrame( render );	
 	}
 	//End class Engine
